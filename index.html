@@ -191,7 +191,7 @@
     <div class="field">
       <label class="flabel req">주소</label>
       <div class="address-group">
-        <input type="text" id="a_address" data-label="주소" placeholder="주소 검색을 누르거나 직접 입력해 주세요">
+        <input type="text" id="a_address" data-label="주소" placeholder="주소 검색을 이용해 주세요" readonly>
         <button type="button" onclick="searchAddress()">주소 검색</button>
       </div>
       <input type="text" id="a_address_detail" placeholder="상세주소를 입력해 주세요">
@@ -395,9 +395,6 @@
 
   // ---- 로컬/웹 환경 철저 대응 동적 카카오 주소 API 실행 함수 ----
   function searchAddress() {
-    if(location.protocol === 'file:'){
-      alert("이 파일을 더블클릭으로 직접 여신 것 같아요(주소창이 file:///로 시작).\n이 상태에서는 주소 검색 결과가 입력칸에 전달되지 않습니다.\n\n해결 방법:\n1) 폴더에서 'python -m http.server' 실행 후 http://localhost:8000 으로 접속\n2) 또는 VSCode 'Live Server' 확장으로 열기\n3) 또는 회사 웹서버/호스팅에 올려서 http(s):// 주소로 접속\n\n그래도 검색을 시도하시겠습니까?");
-    }
     // 윈도우에 daum 객체가 비어있을 경우 동적으로 라이브러리를 안전 프로토콜로 주입
     if (typeof daum === 'undefined' || !daum.Postcode) {
       const script = document.createElement('script');
@@ -417,9 +414,7 @@
   function executeKakaoPostcode() {
     new daum.Postcode({
       oncomplete: function(data) {
-        let addr = data.roadAddress || data.jibunAddress;
-        if(data.buildingName){ addr += ` (${data.buildingName})`; }
-        document.getElementById('a_address').value = addr;
+        document.getElementById('a_address').value = data.roadAddress;
         document.getElementById('a_address_detail').focus();
         updateTabStatus();
       }
@@ -761,7 +756,6 @@
     if(!document.getElementById('a_address').value.trim()) ok = false;
     if(!document.querySelector('[data-label="사업자등록번호"]').value.trim()) ok = false;
     if(!document.querySelector('[data-label="대표자 성명"]').value.trim()) ok = false;
-    if(!document.querySelector('input[name="heat_side"]:checked')) ok = false;
     if(!matVal()) ok=false;
     if(!hasSig) ok=false;
     return ok;
@@ -820,31 +814,41 @@
     return `
     <table class="formgrid">
       <tr><td class="ttl" colspan="6">시 험 의 뢰 서</td></tr>
-      <tr><td class="lab">접수번호</td><td colspan="2"></td><td class="lab">접수일자</td><td colspan="2">${todayStr}</td></tr>
-      <tr><td class="lab" rowspan="6">의뢰기관</td><td class="lab">기관명</td><td colspan="2">${company}</td><td class="lab">의뢰자</td><td>${requester}</td></tr>
-      <tr><td class="lab">공사명</td><td colspan="4">${project}</td></tr>
-      <tr><td class="lab">주소</td><td colspan="4">${fullAddr}</td></tr>
+      <tr><td colspan="6" style="border:none;text-align:center;font-size:11px;color:#555;padding:0 0 6px;">※ 고객은 굵은 선 안에만 기재하시기 바랍니다.</td></tr>
+      <tr><td class="lab">접 수 번 호</td><td colspan="2"></td><td class="lab">접 수 일 자</td><td colspan="2"></td></tr>
+      <tr><td class="lab" rowspan="6">의뢰기관</td><td class="lab">기 관 명</td><td colspan="2">${company}</td><td class="lab">의 뢰 자</td><td>${requester}</td></tr>
+      <tr><td class="lab">공 사 명</td><td colspan="4">${project}</td></tr>
+      <tr><td class="lab">주    소</td><td colspan="4">${fullAddr}</td></tr>
       <tr><td class="lab">일반전화</td><td colspan="2">${phone}</td><td class="lab">팩스번호</td><td>${val('docA','팩스번호')}</td></tr>
       <tr><td class="lab">이동전화</td><td colspan="2">${phone}</td><td class="lab">E-mail</td><td>${email}</td></tr>
-      <tr><td class="lab">구분</td><td colspan="4">${['기업체','개인','대학','연구소','공공기관','기타'].map(v=>(radioVal('A_gubun')===v?'■':'□')+' '+v).join('&nbsp;&nbsp;')}</td></tr>
+      <tr><td class="lab">구    분</td><td colspan="4">${['기업체','개인','대학','연구소','공공기관','기타'].map(v=>(radioVal('A_gubun')===v?'■':'□')+' '+v).join('&nbsp;&nbsp;')}</td></tr>
       <tr><td class="lab" rowspan="3">성적서</td><td colspan="5">${radioVal('A_balgeup')==='발급'?'■':'□'} 발급 &nbsp; ${radioVal('A_balgeup')==='미발급'?'■':'□'} 미발급 &nbsp;&nbsp; ${radioVal('A_jongryu')==='KOLAS공인성적서'?'■':'□'} KOLAS공인성적서 &nbsp; ${radioVal('A_jongryu')==='일반성적서'?'■':'□'} 일반성적서</td></tr>
       <tr><td colspan="5">${langs.includes('국문')?'■':'□'} 국문 &nbsp; ${langs.includes('영문')?'■':'□'} 영문 &nbsp;&nbsp; ${radioVal('A_recv')==='직접수령'?'■':'□'} 직접수령 &nbsp; ${radioVal('A_recv')==='우편수령'?'■':'□'} 우편수령</td></tr>
-      <tr><td class="lab">용도</td><td colspan="4">${val('docA','용도')}</td></tr>
-      <tr><td class="sect" colspan="6">신청내용</td></tr>
-      <tr><td class="lab">시료명</td><td colspan="2">${document.getElementById('c_sample').value}</td><td class="lab">시료수량</td><td colspan="2">${getSampleQtyValue()}</td></tr>
+      <tr><td class="lab">용 도</td><td colspan="4">${val('docA','용도')}</td></tr>
+      <tr><td class="sect" colspan="6">※ 신청내용</td></tr>
+      <tr><td class="lab">시 료 명</td><td colspan="2">${document.getElementById('c_sample').value}</td><td class="lab">시료수량</td><td colspan="2">${getSampleQtyValue()}</td></tr>
       <tr><td class="lab">시료채취장소</td><td colspan="2">${val('docA','시료채취장소')}</td><td class="lab">시료채취일</td><td colspan="2">${val('docA','시료채취일')}</td></tr>
-      <tr><td class="lab">시료채취자(인)</td><td colspan="2">${val('docA','시료채취자')}</td><td class="lab">참관자(인)</td><td colspan="2">${val('docA','참관자')}</td></tr>
-      <tr><td class="lab">발주자</td><td colspan="2">${val('docA','발주자')}</td><td class="lab">시공자</td><td colspan="2">${val('docA','시공자')}</td></tr>
+      <tr><td class="lab">시료채취자(인)</td><td colspan="2">${val('docA','시료채취자')}</td><td class="lab">참 관 자(인)</td><td colspan="2">${val('docA','참관자')}</td></tr>
+      <tr><td class="lab">발 주 자</td><td colspan="2">${val('docA','발주자')}</td><td class="lab">시 공 자</td><td colspan="2">${val('docA','시공자')}</td></tr>
       <tr><td class="lab">시료상태</td><td colspan="5">${radioVal('A_sangtae')==='이상무'?'■':'□'} 이상무 &nbsp; ${radioVal('A_sangtae')==='이상유'?'■':'□'} 이상유 (이상내용: ${val('docA','이상내용')})</td></tr>
-      <tr><td class="lab">시료처리</td><td colspan="5">${radioVal('A_cheori')==='폐기'?'■':'□'} 폐기 &nbsp; ${radioVal('A_cheori')==='반환'?'■':'□'} 반환 (일자: ${val('docA','반환일자')})</td></tr>
+      <tr><td class="lab">시료처리</td><td colspan="5">${radioVal('A_cheori')==='폐기'?'■':'□'} 폐  기 &nbsp; ${radioVal('A_cheori')==='반환'?'■':'□'} 반환 (일자: ${val('docA','반환일자')})</td></tr>
       <tr><td colspan="6" style="border:none;padding-top:10px;"></td></tr>
-      <tr><td class="lab center">No</td><td colspan="2" class="lab center">시험항목</td><td class="lab center">시험방법(적용규격)</td><td class="lab center">수수료</td><td class="lab center">완료예정일</td></tr>
+      <tr><td class="lab center">No</td><td colspan="2" class="lab center">시험항목</td><td class="lab center">시험방법(적용규격)</td><td class="lab center">수 수 료</td><td class="lab center">시험완료예정일</td></tr>
       ${testRows || '<tr><td colspan="6" class="center small">선택된 시험 항목 없음</td></tr>'}
-      <tr><td class="lab">고객/변경 요구 협의사항</td><td colspan="5">${val('docA','고객/변경 요구 협의사항')}</td></tr>
+      <tr><td colspan="6" class="small" style="border:none;padding:8px 4px;line-height:1.7;">
+        주) 1. 반환요청 후 인수하지 않은 시료는 성적서 발급일로부터 15일간 보관되며, 보관기간이 만료되거나 반환된 시료에 대해서는 향후 이의를 제기 할 수 없음을 주지하시기 바랍니다.<br>
+        　　2. 수수료 납부는 한국건설자재시험연구원의 통보 및 확인을 통해서, 계좌번호 : 기업은행 409-061883-01-019 (예금주 : 한국건설자재시험연구원 주식회사)로 입금을 해주시고, 납부완료 후 시험성적서, 세금계산서 등을 수령하실 때는 접수증, 사업자등록증을 제출해 주시기바랍니다.<br>
+        　　3. 접수시의 수수료는 고객의 요구사항변경 등의 사유로 수수료 납부시의 금액과 다를 수 있습니다.
+      </td></tr>
+      <tr><td class="lab" rowspan="2">적합성 진술</td><td colspan="5">■ 포함 (적용 시험항목 : ${tests.join(', ')}) &nbsp; □ 미포함</td></tr>
+      <tr><td colspan="5">의사결정규칙 : ${radioVal('C_rule')!=='-' ? radioVal('C_rule') : ''}</td></tr>
+      <tr><td class="lab">고객/변경 요구<br>협의사항</td><td colspan="3">${val('docA','고객/변경 요구 협의사항')}</td><td class="lab" colspan="2">검토의견</td></tr>
+      <tr><td class="lab">접 수 자</td><td colspan="2">(서명)</td><td class="lab">기술책임자</td><td colspan="2">(서명)</td></tr>
       <tr><td colspan="6" class="declare">당사는 시험의뢰서의 협의된 사항을 확인하였으며, 이에 동의하고 시험을 신청합니다.<br>${todayStr}
         <div class="sigline">의뢰자 : <b>${requester}</b> &nbsp;(서명)<img src="${sigDataUrl()}"></div>
         <div style="text-align:center;font-weight:700;margin-top:6px;">한국건설자재시험연구원장 귀하</div>
       </td></tr>
+      <tr><td colspan="6" style="border:none;font-size:10px;color:#888;padding-top:4px;">KCM-QP-12-01 Rev.2 &nbsp;&nbsp;&nbsp;&nbsp; 한국건설자재시험연구원(주) &nbsp;&nbsp;&nbsp;&nbsp; A4(210mm×297mm)</td></tr>
     </table>`;
   }
 
@@ -860,7 +864,7 @@
     
     return `
     <table class="formgrid">
-      <tr><td class="ttl" colspan="5">시 험 체 구 성 확 인 서</td></tr>
+      <tr><td class="ttl" colspan="5">시험체 구성 확인서</td></tr>
       <tr><td class="lab" rowspan="4">의뢰인</td><td class="lab">회사명·현장명</td><td colspan="3">${company} / ${project}</td></tr>
       <tr><td class="lab">의뢰자명</td><td>${requester}</td><td class="lab">대표자 성명</td><td>${val('docB','대표자 성명')}</td></tr>
       <tr><td class="lab">사업자등록번호</td><td>${val('docB','사업자등록번호')}</td><td class="lab">E-mail</td><td>${email}</td></tr>
@@ -890,31 +894,34 @@
     const phone=document.getElementById('c_phone').value, email=document.getElementById('c_email').value;
     const sample=document.getElementById('c_sample').value, tests=getCheckedTestLabels();
     const critTests=getCheckedTests();
-    let critRows='';
+    let scopeRows='', critRows='';
     critTests.forEach(t=>{
       (CRITERIA[t]||[]).forEach((row,i)=>{
+        scopeRows += `<tr><td>${i===0?testLabel(t):''}</td><td>${row[0]}</td></tr>`;
         critRows += `<tr><td>${i===0?testLabel(t):''}</td><td>${row[0]}</td><td></td><td>${row[1]}</td></tr>`;
       });
     });
     return `
     <table class="formgrid">
-      <tr><td class="ttl" colspan="4">적 합 성 진 술 신 청 서</td></tr>
-      <tr><td class="lab">접수번호</td><td></td><td class="lab">접수일자</td><td>${todayStr}</td></tr>
-      <tr><td class="lab">기관명</td><td>${company}</td><td class="lab">의뢰자</td><td>${requester} (인)</td></tr>
-      <tr><td class="lab">e-mail</td><td>${email}</td><td class="lab">연락처</td><td>${phone}</td></tr>
-      <tr><td class="lab">시료명</td><td>${sample}</td><td class="lab">시험항목</td><td>${tests.join(', ')}</td></tr>
-      <tr><td class="lab">시험방법(적용규격)</td><td colspan="3">국토교통부 고시 제2025-508호</td></tr>
-      <tr><td class="sect" colspan="4">적합성 진술 범위 / 판정기준</td></tr>
+      <tr><td class="ttl" colspan="4">적합성 진술 신청서</td></tr>
+      <tr><td class="lab">접수번호</td><td></td><td class="lab">접수일자</td><td></td></tr>
+      <tr><td class="lab">기 관 명</td><td>${company}</td><td class="lab">의 뢰 자</td><td>${requester} (인)</td></tr>
+      <tr><td class="lab">e-mail</td><td>${email}</td><td class="lab">연 락 처</td><td>${phone}</td></tr>
+      <tr><td class="lab">시 료 명</td><td colspan="3">${sample}</td></tr>
+      <tr><td class="lab">시험항목</td><td>${tests.join(', ')}</td><td class="lab">시험방법(적용규격)</td><td>국토교통부 고시 제2025-508호</td></tr>
+      <tr><td class="sect" colspan="4">적합성 진술 범위 (측정범위 식별)</td></tr>
+      <tr><td class="lab center">시험명</td><td class="lab center" colspan="3">시험항목</td></tr>
+      ${scopeRows || '<tr><td colspan="4" class="center small">시험 항목을 선택하세요</td></tr>'}
+      <tr><td class="lab">규격충족 여부</td><td colspan="3" class="small">□ 전체 충족 &nbsp; □ 충족하지 않음 &nbsp; □ 일부 충족 (검토내용 기술 — 시험 후 연구원 작성)</td></tr>
       <tr><td class="lab center">시험명</td><td class="lab center">시험항목</td><td class="lab center">측정값(시험 후 작성)</td><td class="lab center">판정기준</td></tr>
       ${critRows || '<tr><td colspan="4" class="center small">시험 항목을 선택하세요</td></tr>'}
-      <tr><td class="lab">규격충족 여부</td><td colspan="3" class="small">□ 전체 충족 &nbsp; □ 충족하지 않음 &nbsp; □ 일부 충족 (시험 후 연구원 작성)</td></tr>
-      <tr><td class="lab" rowspan="3">의사결정규칙</td><td colspan="3">${['단순채택에 의한 이분/이분법적 진술','보호대역에 따른 이분/이분법적 진술','보호대역에 따른 비이분/비이분법적 진술'].map(v=>(radioVal('C_rule')===v?'■':'□')+' '+v).join('<br>')}</td></tr>
+      <tr><td class="lab" rowspan="2">의사결정규칙</td><td colspan="3">${['단순채택에 의한 이분/이분법적 진술','보호대역에 따른 이분/이분법적 진술','보호대역에 따른 비이분/비이분법적 진술'].map(v=>(radioVal('C_rule')===v?'■':'□')+' '+v).join('<br>')}</td></tr>
       <tr><td colspan="3" class="small">의사결정규칙 '단순채택에 의한 이분/이분법적 진술'의 경우 측정불확도에 의한 판정 리스크가 존재할 수 있음을 의뢰자에게 알림.</td></tr>
-      <tr><td colspan="3"></td></tr>
       <tr><td class="lab">기타 협의사항</td><td colspan="3">${val('docC','기타 협의사항')}</td></tr>
       <tr><td colspan="4" class="declare">${todayStr}
         <div class="sigline">의뢰자 : <b>${requester}</b> &nbsp;(인)<img src="${sigDataUrl()}"></div>
       </td></tr>
+      <tr><td colspan="4" style="border:none;font-size:10px;color:#888;padding-top:4px;">KCM-QP-14-01 Rev.0 &nbsp;&nbsp;&nbsp;&nbsp; 한국건설자재시험연구원(주) &nbsp;&nbsp;&nbsp;&nbsp; A4(210mm×297mm)</td></tr>
     </table>`;
   }
 
